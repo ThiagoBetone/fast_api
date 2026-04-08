@@ -20,3 +20,12 @@ def test_root_deve_retornar_ola_mundo():
     # assert
     assert response.json() == {'message': 'Hello World'}
     assert response.status_code == HTTPStatus.OK
+
+
+def test_root_deve_retornar_exercicio():
+    client = TestClient(app)
+
+    response = client.get('/exercicio')
+
+    assert response.json() == {'message': 'checando exercici'}
+    assert response.status_code == HTTPStatus.OK
