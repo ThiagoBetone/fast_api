@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+from fast_api.schemas import UserPublic
+
 
 def test_root_deve_retornar_ola_mundo(client):
     """
@@ -51,17 +53,21 @@ def test_read_user(client):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'users': [
-            {
-                'id': 1,
-                'email': 'alice@example.com',
-                'username': 'alice',
-            }
-        ],
+        'users': [],
     }
 
 
-def test_update_user(client):
+def test_read_user_with_user(client, user):
+    user_schema = UserPublic.model_validate(user).model_dump()
+    response = client.get('/users/')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'users': [user_schema],
+    }
+
+
+def test_update_user(client, user):
     response = client.put(
         '/users/1',
         json={
@@ -92,13 +98,13 @@ def test_user_not_created(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_select_user(client):
-    response = client.get('/users/1')
+def test_select_user(client, user):
+    response = client.get(f'/users/{user.id}')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'username': 'Bob',
-        'email': 'bob@example.com',
+        'username': 'Teste',
+        'email': 'teste@test.com',
         'id': 1,
     }
 
@@ -108,15 +114,11 @@ def test_selected_user_not_found(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_user(client):
+def test_delete_user(client, user):
     response = client.delete('/users/1')
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'username': 'Bob',
-        'email': 'bob@example.com',
-        'id': 1,
-    }
+    assert response.json() == {'message': 'User deleted'}
 
 
 def test_user_deleted_not_created(client):
@@ -125,3 +127,26 @@ def test_user_deleted_not_created(client):
     )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_update_integrity_error(client, user):
+    client.post(
+        '/users/',
+        json={
+            'username': 'fausto',
+            'email': 'fausto@example.com',
+            'password': 'secret',
+        },
+    )
+
+    response = client.put(
+        f'/users/{user.id}',
+        json={
+            'username': 'fausto',
+            'email': 'bob@example.com',
+            'password': 'newpassword',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Username or email already exists'}
